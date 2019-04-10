@@ -19,12 +19,18 @@
 #include <linux/tty.h>
 #include <asm/io.h>
 #include <asm/system.h>
+#include <string.h>
 
 #define SCREEN_START 0xb8000
 #define SCREEN_END   0xc0000
 #define LINES 25
 #define COLUMNS 80
 #define NPAR 16
+
+// My defs ...
+#define TOOL_WIDTH 22
+#define TOOL_HEIGHT 12
+// ...
 
 extern void keyboard_interrupt(void);
 
@@ -39,11 +45,153 @@ static unsigned long npar,par[NPAR];
 static unsigned long ques=0;
 static unsigned char attr=0x07;
 
+// My vars ...
+short ls_files[10][16];
+// ...
+
 /*
  * this is what the terminal answers to a ESC-Z or csi0c
  * query (= vt100 response).
  */
 #define RESPONSE "\033[?1;2c"
+
+// My functions ...
+
+void render_border(){
+	short* tool_vmpos = origin + 2*(COLUMNS - TOOL_WIDTH);
+	short* iter_vmpos = tool_vmpos;
+	char* path = " [ /root/dev ] ";
+	int path_len = strlen(path);
+	char first_row[TOOL_WIDTH];
+	int k, p;
+	
+	// Create first row with path b
+	for(k=0, p=0; k<TOOL_WIDTH; k++){
+		if(k >= (TOOL_WIDTH-path_len)/2 && k < (TOOL_WIDTH-path_len)/2 + path_len)
+			first_row[k] = path[p++];
+		else
+			first_row[k] = '#';
+	}
+
+	// Render first row
+	for(k=0; k<TOOL_WIDTH; k++, iter_vmpos++){
+		*iter_vmpos = ((short) 0x3 << 8) | ((const char) first_row[k]);
+	}
+
+	// Render body
+	short* i, *j;
+	for(i=tool_vmpos+COLUMNS; i<tool_vmpos + (COLUMNS * TOOL_HEIGHT); i+=COLUMNS){
+		*i = ((short) 0x3 << 8) | '#';
+		for(j=i+1; j<i+TOOL_WIDTH-1; j++){
+			*j = ((short) 0x0 << 8) | ' ';
+		}
+		*j = ((short) 0x3 << 8) | '#';
+	}
+	
+	//render last row
+	for(j=i; j<i+TOOL_WIDTH; j++){
+		*j = ((short) 0x3 << 8) | '#';
+	}
+}
+
+
+void f2_handle(int f2_flag){
+	if(f2_flag){
+		render_border();
+		struct m_inode* root_node = iget(0x301, 1);
+		current->pwd = root_node;
+		current->root = root_node; 
+		struct m_inode* dir_node = namei("/root");
+		struct buffer_head* bf_head = bread(0x301, dir_node->i_zone[0]);
+		struct dir_entry* current_file = (struct dir_entry*) bf_head->b_data;
+
+		int i,k;
+		short* my_vm = origin;
+		current_file += 2;
+
+		for(k=0; k<10; k++)
+			ls_files[k][0] = (short) '\0';
+
+		for(k = 0; k<10; k++){
+			char* file_name = current_file->name;
+			i = 0;
+			while(file_name[i] != '\0'){
+				ls_files[k][i] = ((short) 0x1 << 8) | file_name[i++];
+			}
+			ls_files[k][i] = (short) 0x0;
+
+			current_file++;
+		}
+
+		render_ls();
+
+		current->root = NULL;
+		current->pwd = NULL;
+
+		iput(root_node);
+		iput(dir_node);
+	}
+
+	
+}
+
+int short_len(short* str){
+	int i=0;
+	short temp = str[i];
+	while(((char) temp) != '\0'){
+		temp = str[i++];
+	}
+	return i-1;
+}
+
+int short_to_str(short* str, char* str1){
+	short temp;
+	int i = 0;
+	int len = short_len(str);
+	for(i=0; i<len; i++){
+		temp = str[i];
+		str1[i] = (char) temp;
+	}
+
+	str1[i] = '\0';
+	return len;
+}
+
+void print_entry(short* entry_name, int index){
+	short* ls_vm = origin + COLUMNS*2*(index+2) - TOOL_WIDTH*2 + 2;
+	int name_len = short_len(entry_name);
+
+	int i, p;
+	for(i=0, p=0; i<TOOL_WIDTH-2; i++){
+		if(i >= (TOOL_WIDTH-name_len)/2 && i < (TOOL_WIDTH + name_len)/2)
+			*(ls_vm++) = entry_name[p++];
+		else
+			ls_vm++;  // moze da se stavi i ' ' zbog overwrite-a
+	}
+	if(index == 0){
+		char str[15];
+		name_len = short_to_str(entry_name, str);
+		ls_vm = origin;
+		for(i=0; i<name_len; i++){
+			*(ls_vm++) = ((short) 0x2 << 8) | str[i];
+		}
+	}
+}
+
+void render_ls(){
+	
+	int i;
+	for(i=0; i<10; i++){
+		print_entry(ls_files[i], i);
+	}
+
+}
+
+
+
+ // ...
+
+
 
 static inline void gotoxy(unsigned int new_x,unsigned int new_y)
 {
