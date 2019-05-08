@@ -17,8 +17,10 @@
 
 #include <linux/sched.h>
 #include <linux/tty.h>
+#include <sys/stat.h>
 #include <asm/io.h>
 #include <asm/system.h>
+#include <linux/tty.h>
 #include <string.h>
 
 #define SCREEN_START 0xb8000
@@ -30,6 +32,7 @@
 // My defs ...
 #define TOOL_WIDTH 22
 #define TOOL_HEIGHT 12
+#define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 // ...
 
 extern void keyboard_interrupt(void);
@@ -45,8 +48,20 @@ static unsigned long npar,par[NPAR];
 static unsigned long ques=0;
 static unsigned char attr=0x07;
 
+
 // My vars ...
 short ls_files[10][16];
+char clipboard[10][20];
+short cliboard_cursor[2]; 		// row and column of cursor
+short children_inodes[10];
+short selected_row_index = 0;
+short current_dir_len =0;
+char init_flag = 0;
+char current_dir_path[22];  	// Set to "/" in con_init();
+struct m_inode* root_node;
+int scrupt_state_flag = 0;
+char is_dir[10];
+
 // ...
 
 /*
@@ -57,14 +72,20 @@ short ls_files[10][16];
 
 // My functions ...
 
-void render_border(){
+void render_border(char* title){
 	short* tool_vmpos = origin + 2*(COLUMNS - TOOL_WIDTH);
 	short* iter_vmpos = tool_vmpos;
-	char* path = " [ /root/dev ] ";
+	char path[25];
+	strcpy(path, " [ ");
+	strcat(path, title);
+	strcat(path, " ] ");
 	int path_len = strlen(path);
 	char first_row[TOOL_WIDTH];
 	int k, p;
-	
+	short color = 0x0300;
+	if(!strcmp("CLIPBOARD", title))
+		color = 0x0100;
+
 	// Create first row with path b
 	for(k=0, p=0; k<TOOL_WIDTH; k++){
 		if(k >= (TOOL_WIDTH-path_len)/2 && k < (TOOL_WIDTH-path_len)/2 + path_len)
@@ -75,61 +96,168 @@ void render_border(){
 
 	// Render first row
 	for(k=0; k<TOOL_WIDTH; k++, iter_vmpos++){
-		*iter_vmpos = ((short) 0x3 << 8) | ((const char) first_row[k]);
+		*iter_vmpos = color | ((const char) first_row[k]);
 	}
-
+	
 	// Render body
 	short* i, *j;
 	for(i=tool_vmpos+COLUMNS; i<tool_vmpos + (COLUMNS * TOOL_HEIGHT); i+=COLUMNS){
-		*i = ((short) 0x3 << 8) | '#';
+		*i = color | '#';
 		for(j=i+1; j<i+TOOL_WIDTH-1; j++){
 			*j = ((short) 0x0 << 8) | ' ';
 		}
-		*j = ((short) 0x3 << 8) | '#';
+		*j = color | '#';
 	}
 	
 	//render last row
 	for(j=i; j<i+TOOL_WIDTH; j++){
-		*j = ((short) 0x3 << 8) | '#';
+		*j = color | '#';
 	}
 }
 
+// DONT TOUCH THIS!!
+void get_children_from_fs(){
+	struct m_inode *dir_node;
+	root_node = iget(0x301, 1);
+	struct buffer_head* bf_head;
+
+	if(!init_flag){
+		current->pwd = root_node;
+		current->root = root_node;
+		bf_head = bread(0x301, root_node->i_zone[0]);
+
+	}else{
+		current->pwd = root_node;
+		current->root = root_node;
+		dir_node = namei(current_dir_path); 
+		
+		bf_head = bread(0x301, dir_node->i_zone[0]);
+		iput(dir_node);
+	}
+	struct dir_entry* current_file = (struct dir_entry*) bf_head->b_data;
+	
+
+	int i,k;
+	short* my_vm = origin;
+	current_file += 2;
+
+	for(k=0; k<10; k++)
+		ls_files[k][0] = (short) '\0';
+
+	current_dir_len = 0;
+	for(k = 0; k<10; k++){
+		char* file_name = current_file->name;
+		children_inodes[k] = current_file->inode;
+		char temp_name[22];
+		strcpy(temp_name, current_dir_path);
+		if(strcmp(current_dir_path, "/"))
+			strcat(temp_name, "/");
+		
+		strcat(temp_name, file_name);
+		struct m_inode* curr_inode = namei(temp_name);
+
+		short color = 0x0700;
+		is_dir[k] = 0;
+		if(S_ISDIR((curr_inode->i_mode))){
+			is_dir[k] = 1;
+			color = 0x0100;
+		}else if(CHECK_BIT(curr_inode->i_mode, 6)){  // Is executable by owner? (Bit 6)
+			color = 0x0200;
+		}
+		if(CHECK_BIT(curr_inode->i_mode, 13)){       // Check if char device (Bit 13)
+			color = 0x0600;
+		}
+		iput(curr_inode);
+			
+
+		i = 0;
+		while(file_name[i] != '\0'){
+			ls_files[k][i] = (color) | file_name[i++];
+		}
+		if(i > 0)
+			current_dir_len++;
+
+		ls_files[k][i] = (short) 0x0;
+
+		current_file++;
+	}
+
+	
+	if(!init_flag){
+		init_flag = 1;	
+	}
+
+	iput(root_node);
+	current->root = NULL;
+	current->pwd = NULL;
+
+}
+
+void render_ls(){
+	int i;
+	for(i=0; i<10; i++){
+		print_entry(ls_files[i], i);
+	}
+
+}
+// called first time in con_init()
+void clear_cliboard(){			
+	int i;
+	for(i=0; i<10; i++){
+		strcpy(clipboard[i], "");
+	}
+}
+
+short* get_currsor_vm_pos(){
+	short* clb_vm = origin + COLUMNS*2*(cliboard_cursor[0]+2) - TOOL_WIDTH*2 + cliboard_cursor[1]*2 + 2;
+	return clb_vm;
+}
+void print_to_clb(char c){
+	if(c == 127){			// 127 -> BACKSPACE
+		int len = strlen(clipboard[selected_row_index]);
+		if(len == 0)
+			return;
+		clipboard[selected_row_index][len-1] = '\0';
+		move_cursor_col(-1);
+	}else{
+		if(cliboard_cursor[1] + 1 > 19)
+		return;
+		char current_char[2];
+		current_char[0] = c;
+		current_char[1] = '\0';
+		strcat(clipboard[selected_row_index], current_char);
+		move_cursor_col(1);
+	}
+	print_clipboard();
+
+}
+void move_cursor_col(short pos){
+	short* cursor_vm = get_currsor_vm_pos();
+	*cursor_vm = 0x0000 | (char) *cursor_vm;
+	cliboard_cursor[1] += pos;
+	cursor_vm += pos;
+	if(pos > 0)
+		*cursor_vm = 0x7000 | (char) *cursor_vm;
+	else if(pos < 0)
+		*cursor_vm = 0x7000 | ' ';
+
+}
 
 void f2_handle(int f2_flag){
-	if(f2_flag){
-		render_border();
-		struct m_inode* root_node = iget(0x301, 1);
-		current->pwd = root_node;
-		current->root = root_node; 
-		struct m_inode* dir_node = namei("/root");
-		struct buffer_head* bf_head = bread(0x301, dir_node->i_zone[0]);
-		struct dir_entry* current_file = (struct dir_entry*) bf_head->b_data;
-
-		int i,k;
-		short* my_vm = origin;
-		current_file += 2;
-
-		for(k=0; k<10; k++)
-			ls_files[k][0] = (short) '\0';
-
-		for(k = 0; k<10; k++){
-			char* file_name = current_file->name;
-			i = 0;
-			while(file_name[i] != '\0'){
-				ls_files[k][i] = ((short) 0x1 << 8) | file_name[i++];
-			}
-			ls_files[k][i] = (short) 0x0;
-
-			current_file++;
-		}
-
+	scrupt_state_flag = f2_flag;
+	selected_row_index = 0;
+	if(f2_flag == 1){
+		// creates file explorer
+		render_border(current_dir_path);
+		get_children_from_fs();
 		render_ls();
-
-		current->root = NULL;
-		current->pwd = NULL;
-
-		iput(root_node);
-		iput(dir_node);
+		
+	}else if(f2_flag == 2){
+		// create clipbord
+		cliboard_cursor[0] = 0;
+		cliboard_cursor[1] = strlen(clipboard[0]);
+		render_border("CLIPBOARD");
+		print_clipboard();
 	}
 
 	
@@ -168,23 +296,150 @@ void print_entry(short* entry_name, int index){
 		else
 			ls_vm++;  // moze da se stavi i ' ' zbog overwrite-a
 	}
-	if(index == 0){
-		char str[15];
-		name_len = short_to_str(entry_name, str);
-		ls_vm = origin;
-		for(i=0; i<name_len; i++){
-			*(ls_vm++) = ((short) 0x2 << 8) | str[i];
+
+}
+
+void print_clipboard(){
+	short* clb_vm = origin + COLUMNS*4 - TOOL_WIDTH*2 + 2;
+
+	int i;
+	for(i =0; i<10; i++){
+		char* line = clipboard[i];
+		int j = 0;
+		short* tmp_vm = clb_vm;
+		while(line[j] != '\0'){
+			(*tmp_vm++) = 0x0700 | line[j++]; 
 		}
+		clb_vm += COLUMNS;
+	}
+	
+}
+
+void arrow_down_handle(int f2_flag){
+	if(f2_flag == 1){
+		// deleting previous arrow
+		short* selected_vm = origin + COLUMNS*2*(selected_row_index+2) - TOOL_WIDTH*2 + 2;
+		*(selected_vm) = ((short) 0x0 << 8) | ' ';
+		*(selected_vm+TOOL_WIDTH-3) = ((short) 0x0 << 8) | ' ';
+
+		selected_row_index = (selected_row_index+1)%current_dir_len;
+
+		// Printing new arrow
+		selected_vm = origin + COLUMNS*2*(selected_row_index+2) - TOOL_WIDTH*2 + 2;
+		*(selected_vm) = ((short) 0x2 << 8) | '>';
+		*(selected_vm+TOOL_WIDTH-3) = ((short) 0x2 << 8) | '<';
+
+	}else if(f2_flag == 2){
+
+		short* clb_vm = get_currsor_vm_pos();
+		*clb_vm = 0x0000 | (char) *clb_vm;
+
+		selected_row_index = (selected_row_index+1)%10;
+
+		cliboard_cursor[0] = selected_row_index;
+		cliboard_cursor[1] = strlen(clipboard[selected_row_index]);
+
+		clb_vm = get_currsor_vm_pos();
+		*clb_vm = 0x7000 | (char) *clb_vm;
 	}
 }
 
-void render_ls(){
-	
-	int i;
-	for(i=0; i<10; i++){
-		print_entry(ls_files[i], i);
+void arrow_up_handle(int f2_flag){
+	if(f2_flag == 1){
+		// deleting previous arrow
+		short* selected_vm = origin + COLUMNS*2*(selected_row_index+2) - TOOL_WIDTH*2 + 2;
+		*(selected_vm) = ((short) 0x0 << 8) | ' ';
+		*(selected_vm+TOOL_WIDTH-3) = ((short) 0x0 << 8) | ' ';
+
+		selected_row_index--;
+
+		if(selected_row_index < 0){
+			selected_row_index = current_dir_len - 1;
+		}
+		// Printing new arrow
+		selected_vm = origin + COLUMNS*2*(selected_row_index+2) - TOOL_WIDTH*2 + 2;
+		*(selected_vm) = ((short) 0x2 << 8) | '>';
+		*(selected_vm+TOOL_WIDTH-3) = ((short) 0x2 << 8) | '<';
+
+	}else if(f2_flag == 2){
+
+		short* clb_vm = get_currsor_vm_pos();
+		*clb_vm = 0x0000 | (char) *clb_vm;
+
+		selected_row_index--;
+		if(selected_row_index < 0)
+			selected_row_index = 9;
+
+		cliboard_cursor[0] = selected_row_index;
+		cliboard_cursor[1] = strlen(clipboard[selected_row_index]);
+		clb_vm = get_currsor_vm_pos();
+		*clb_vm = 0x7000 | (char) *clb_vm;
 	}
 
+}
+
+void arrow_right_handle(int f2_flag){
+	if(f2_flag == 1){
+		if(is_dir[selected_row_index] == 0)    // Check if its NOT a directory
+			return;
+		char new_path[15];
+		if(strcmp(current_dir_path, "/"))
+			strcat(current_dir_path, "/");
+		short_to_str(ls_files[selected_row_index], new_path);
+		strcat(current_dir_path, new_path);
+
+		get_children_from_fs();
+		render_border(current_dir_path);
+		render_ls();
+	}else if(f2_flag == 2){
+
+	}
+
+}
+
+void arrow_left_handle(int f2_flag){
+	if(f2_flag == 1){
+		if(!strcmp(current_dir_path, "/"))
+			return;
+		int i;
+		for(i = strlen(current_dir_path); current_dir_path[i-1] != '/'; i--)
+			;
+		if(strcmp(current_dir_path, "/"))
+			current_dir_path[i] = '\0';
+		else
+			current_dir_path[i+1] = '\0';
+
+		get_children_from_fs();
+		render_border(current_dir_path);
+		render_ls();
+	} else if(f2_flag == 2){
+		
+	}
+
+}
+
+void space_handle(int f2_flag){
+	char file_to_cpy[22];
+	if(f2_flag == 1){
+		strcpy(file_to_cpy, current_dir_path);
+		if(strcmp(current_dir_path, "/"))
+			strcat(file_to_cpy, "/");
+
+		strcat(file_to_cpy, ls_files[selected_row_index]);
+		
+	}else if(f2_flag == 2){
+		strcpy(file_to_cpy, clipboard[selected_row_index]);
+	}
+	int i;
+	int len = strlen(file_to_cpy);
+	for(i=0; i<len; i++){
+		char c = file_to_cpy[i];
+		if(c>31 && c<127){
+			PUTCH(c, tty_table[0].read_q);
+			do_tty_interrupt(0);
+		}
+	}
+		
 }
 
 
@@ -266,6 +521,18 @@ static void scrup(void)
 			[columns] "r" (columns)
 			:"memory");
 	}
+
+	if(scrupt_state_flag == 1){
+		// re-render file explorer
+		render_border(current_dir_path);
+		render_ls();
+		
+	}else if(scrupt_state_flag == 2){
+		// re-render clipboard
+		render_border("CLIPBOARD");
+		print_clipboard();
+	}
+
 }
 
 static void scrdown(void)
@@ -702,6 +969,10 @@ void con_write(struct tty_struct * tty)
  */
 void con_init(void)
 {
+	strcpy(current_dir_path, "/");
+	clear_cliboard();
+	
+
 	register unsigned char a;
 
 	gotoxy(*(unsigned char *)(0x90000+510),*(unsigned char *)(0x90000+511));

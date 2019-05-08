@@ -18,7 +18,9 @@ buf = 16
 mode:	.byte 0		/* caps, alt, ctrl and shift mode */
 leds:	.byte 2		/* num-lock, caps, scroll-lock mode (nom-lock on) */
 e0:	.byte 0
+f1_flag: .int 0;
 f2_flag: .int 0
+f3_flag: .int 0;
 
 /*
  *  con_int is the real interrupt routine that reads the
@@ -302,7 +304,13 @@ do_self:
 	orb $0x80,%al
 4:	andl $0xff,%eax
 	xorl %ebx,%ebx
-	call put_queue
+	cmpl $0x1, f3_flag
+	jne 5f
+	pushl %eax
+	call print_to_clb
+	popl %eax
+	ret
+5:	call put_queue
 none:	ret
 
 /*
@@ -317,12 +325,78 @@ minus:	cmpb $1,e0
 	jmp put_queue
 
 
+arrow_up_handler:
+	cmpb $0x1, f1_flag
+	jne cursor
+	pushl f2_flag;
+	call arrow_up_handle
+	addl $0x4, %esp  
+	ret
+
+arrow_down_handler:
+	cmpb $0x1, f1_flag
+	jne cursor
+	pushl f2_flag
+	call arrow_down_handle
+	addl $0x4, %esp  
+	ret
+
+arrow_right_handler:
+	cmpb $0x1, f1_flag
+	jne cursor
+	pushl f2_flag
+	call arrow_right_handle
+	addl $0x4, %esp  
+	ret
+
+arrow_left_handler:
+	cmpb $0x1, f1_flag
+	jne cursor
+	pushl f2_flag
+	call arrow_left_handle
+	addl $0x4, %esp  
+	ret
+
+
+
+f1_up_handler:
+	movl $0x0, f1_flag
+	ret;
+
+f1_down_handler:
+	movl $0x1, f1_flag;
+	ret;
+
+
+
 f2_handler:
-	xorl $0x1, f2_flag
+	cmpl $0x1, f2_flag
+	je 1f
+	movl $0x1, f2_flag
 	pushl f2_flag
 	call f2_handle
-	addl $0x4, %esp		/* simulates pop and discard */
+	addl $0x4, %esp  
 	ret
+1:
+	movl $0x2, f2_flag
+	pushl f2_flag
+	call f2_handle
+	addl $0x4, %esp  		/* same as pop but discards result */
+	ret
+
+f3_handler:
+	xorl $0x1, f3_flag;
+	ret
+
+
+space_handler:
+	cmpb $0x1, f1_flag
+	jne do_self
+	pushl f2_flag;
+	call space_handle
+	addl $0x4, %esp;
+	ret
+
 
 /*
  * This table decides which routine to call when a scan-code has been
@@ -344,13 +418,13 @@ key_table:
 	.long do_self,do_self,do_self,do_self	/* 2C-2F z x c v */
 	.long do_self,do_self,do_self,do_self	/* 30-33 b n m , */
 	.long do_self,minus,rshift,do_self	/* 34-37 . - rshift * */
-	.long alt,do_self,caps,func		/* 38-3B alt sp caps f1 */
-	.long f2_handler,func,func,func		/* 3C-3F f2 f3 f4 f5 */
+	.long alt,space_handler,caps,f1_down_handler		/* 38-3B alt sp caps f1 */
+	.long f2_handler,f3_handler,func,func		/* 3C-3F f2 f3 f4 f5 */
 	.long func,func,func,func		/* 40-43 f6 f7 f8 f9 */
 	.long func,num,scroll,cursor		/* 44-47 f10 num scr home */
-	.long cursor,cursor,do_self,cursor	/* 48-4B up pgup - left */
-	.long cursor,cursor,do_self,cursor	/* 4C-4F n5 right + end */
-	.long cursor,cursor,cursor,cursor	/* 50-53 dn pgdn ins del */
+	.long arrow_up_handler,cursor,do_self,arrow_left_handler	/* 48-4B up pgup - left */
+	.long cursor,arrow_right_handler,do_self,cursor	/* 4C-4F n5 right + end */
+	.long arrow_down_handler,cursor,cursor,cursor	/* 50-53 dn pgdn ins del */
 	.long none,none,do_self,func		/* 54-57 sysreq ? < f11 */
 	.long func,none,none,none		/* 58-5B f12 ? ? ? */
 	.long none,none,none,none		/* 5C-5F ? ? ? ? */
@@ -376,7 +450,7 @@ key_table:
 	.long none,none,none,none		/* AC-AF br br br br */
 	.long none,none,none,none		/* B0-B3 br br br br */
 	.long none,none,unrshift,none		/* B4-B7 br br unrshift br */
-	.long unalt,none,uncaps,none		/* B8-BB unalt br uncaps br */
+	.long unalt,none,uncaps,f1_up_handler		/* B8-BB unalt br uncaps br */
 	.long none,none,none,none		/* BC-BF br br br br */
 	.long none,none,none,none		/* C0-C3 br br br br */
 	.long none,none,none,none		/* C4-C7 br br br br */
