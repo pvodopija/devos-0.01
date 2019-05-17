@@ -1,11 +1,37 @@
 #include <errno.h>
-
 #include <linux/sched.h>
 #include <linux/tty.h>
 #include <linux/kernel.h>
+#include <linux/security.h>
 #include <asm/segment.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
+
+// devos sys_calls
+int sys_mycall(const char *file_path){
+	
+	struct m_inode* root_node = iget(0x301, 1);
+
+	current->pwd = root_node;
+	current->root = root_node;
+	
+
+	struct m_inode* dir_node = namei(file_path);
+
+	if(dir_node){
+		encrypt_file(dir_node);
+	}else{
+		printk("error: file not found.\n");
+	}
+
+	iput(dir_node);
+	iput(root_node);
+	current->pwd = NULL;
+	current->root = NULL;
+
+	return 0;
+}
+// 	<--
 
 int sys_ftime()
 {

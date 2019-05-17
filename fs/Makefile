@@ -17,7 +17,8 @@ CPP	=gcc -E -nostdinc -I../include
 
 OBJS=	open.o read_write.o inode.o file_table.o buffer.o super.o \
 	block_dev.o char_dev.o file_dev.o stat.o exec.o pipe.o namei.o \
-	bitmap.o fcntl.o ioctl.o tty_ioctl.o truncate.o sys_getdents.o
+	bitmap.o fcntl.o ioctl.o tty_ioctl.o truncate.o sys_getdents.o \
+  security.o
 
 fs.o: $(OBJS)
 	$(LD) -r -o fs.o $(OBJS)
@@ -93,3 +94,4 @@ tty_ioctl.o : tty_ioctl.c ../include/errno.h ../include/termios.h \
   ../include/linux/sched.h ../include/linux/head.h ../include/linux/fs.h \
   ../include/sys/types.h ../include/linux/mm.h ../include/linux/kernel.h \
   ../include/linux/tty.h ../include/asm/segment.h ../include/asm/system.h 
+security.o : security.c ../include/linux/fs.h ../include/string.h

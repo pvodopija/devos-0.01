@@ -130,7 +130,6 @@ void get_children_from_fs(){
 		current->pwd = root_node;
 		current->root = root_node;
 		dir_node = namei(current_dir_path); 
-		
 		bf_head = bread(0x301, dir_node->i_zone[0]);
 		iput(dir_node);
 	}

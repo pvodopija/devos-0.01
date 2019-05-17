@@ -203,18 +203,22 @@ static struct m_inode * get_dir(const char * pathname)
 	struct buffer_head * bh;
 	int namelen,inr,idev;
 	struct dir_entry * de;
+	
+	
 
 	if (!current->root || !current->root->i_count)
 		panic("No root inode");
 	if (!current->pwd || !current->pwd->i_count)
 		panic("No cwd inode");
-	if ((c=get_fs_byte(pathname))=='/') {
+	if ((c=get_fs_byte(pathname))=='/') { 
 		inode = current->root;
 		pathname++;
 	} else if (c)
 		inode = current->pwd;
-	else
+	else{
 		return NULL;	/* empty name is bad */
+	}
+
 	inode->i_count++;
 	while (1) {
 		thisname = pathname;
@@ -234,8 +238,9 @@ static struct m_inode * get_dir(const char * pathname)
 		idev = inode->i_dev;
 		brelse(bh);
 		iput(inode);
-		if (!(inode = iget(idev,inr)))
+		if (!(inode = iget(idev,inr))){
 			return NULL;
+		}
 	}
 }
 
@@ -254,6 +259,7 @@ static struct m_inode * dir_namei(const char * pathname,
 
 	if (!(dir = get_dir(pathname)))
 		return NULL;
+	
 	basename = pathname;
 	while ((c=get_fs_byte(pathname++)))
 		if (c=='/')
@@ -280,13 +286,16 @@ struct m_inode * namei(const char * pathname)
 
 	if (!(dir = dir_namei(pathname,&namelen,&basename)))
 		return NULL;
+
 	if (!namelen)			/* special case: '/usr/' etc */
 		return dir;
+
 	bh = find_entry(dir,basename,namelen,&de);
 	if (!bh) {
 		iput(dir);
 		return NULL;
 	}
+
 	inr = de->inode;
 	dev = dir->i_dev;
 	brelse(bh);

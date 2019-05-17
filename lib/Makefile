@@ -24,7 +24,7 @@ CPP	=gcc -E -nostdinc -I../include
 	$(CC) $(CFLAGS) \
 	-c -o $*.o $<
 
-OBJS= ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o execve.o wait.o string.o read.o getdents.o
+OBJS= ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o execve.o wait.o string.o read.o getdents.o mycall.o
 
 lib.a: $(OBJS)
 	$(AR) rcs lib.a $(OBJS)

@@ -125,6 +125,11 @@
 #define __NR_getppid	64
 #define __NR_getpgrp	65
 #define __NR_setsid		66
+
+// devos sys_calls ==>
+#define __NR_mycall 70
+// ------------------
+
 #define __NR_stat		106
 #define __NR_lstat		107
 #define __NR_fstat		108
