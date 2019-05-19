@@ -127,7 +127,9 @@
 #define __NR_setsid		66
 
 // devos sys_calls ==>
-#define __NR_mycall 70
+#define __NR_encr 70
+
+#define __NR_keyset 72
 // ------------------
 
 #define __NR_stat		106
@@ -195,7 +197,10 @@ return __res;\
 #endif /* __LIBRARY__ */
 
 extern int errno;
-
+/* devos sys_calls */
+int encr(const char *file_path);
+int keyset(const char *key);
+/*  */
 int access(const char * filename, mode_t mode);
 int acct(const char * filename);
 int alarm(int sec);

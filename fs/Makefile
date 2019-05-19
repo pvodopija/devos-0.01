@@ -94,4 +94,4 @@ tty_ioctl.o : tty_ioctl.c ../include/errno.h ../include/termios.h \
   ../include/linux/sched.h ../include/linux/head.h ../include/linux/fs.h \
   ../include/sys/types.h ../include/linux/mm.h ../include/linux/kernel.h \
   ../include/linux/tty.h ../include/asm/segment.h ../include/asm/system.h 
-security.o : security.c ../include/linux/fs.h ../include/string.h
+security.o : security.c ../include/linux/fs.h ../include/string.h ../include/linux/security.h

@@ -81,7 +81,7 @@ sys.s sys.o : sys.c ../include/errno.h ../include/linux/sched.h \
 traps.s traps.o : traps.c ../include/string.h ../include/linux/head.h \
   ../include/linux/sched.h ../include/linux/fs.h ../include/sys/types.h \
   ../include/linux/mm.h ../include/linux/kernel.h ../include/asm/system.h \
-  ../include/asm/segment.h 
+  ../include/asm/segment.h ../include/linux/security.h
 tty_io.s tty_io.o : tty_io.c ../include/ctype.h ../include/errno.h \
   ../include/signal.h ../include/sys/types.h ../include/linux/sched.h \
   ../include/linux/head.h ../include/linux/fs.h ../include/linux/mm.h \

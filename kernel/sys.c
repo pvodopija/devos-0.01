@@ -7,14 +7,12 @@
 #include <sys/times.h>
 #include <sys/utsname.h>
 
-// devos sys_calls
-int sys_mycall(const char *file_path){
-	
-	struct m_inode* root_node = iget(0x301, 1);
+/* devos sys_calls */
+int sys_encr(const char *file_path){
 
-	current->pwd = root_node;
-	current->root = root_node;
-	
+	printk(file_path);
+	struct m_inode* root_node = iget(0x301, 1);	
+	current->root =root_node;
 
 	struct m_inode* dir_node = namei(file_path);
 
@@ -31,7 +29,34 @@ int sys_mycall(const char *file_path){
 
 	return 0;
 }
-// 	<--
+
+int sys_decr(const char* file_path){
+
+	return 0;
+}
+
+int sys_keyset(const char* key){
+	char _key[KEY_SIZE];
+
+	userspace_string_cpy(_key, key);
+	
+	if(!set_key(_key)){
+		return 0;
+	}
+		
+	return 1;
+}
+
+int sys_keyclear(){
+	
+	return 0;
+}
+
+int sys_keygen(int level){
+
+	return 0;
+}
+/* end */
 
 int sys_ftime()
 {
