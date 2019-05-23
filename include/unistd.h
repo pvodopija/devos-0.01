@@ -128,7 +128,7 @@
 
 // devos sys_calls ==>
 #define __NR_encr 70
-
+#define __NR_decr 71
 #define __NR_keyset 72
 // ------------------
 
@@ -199,6 +199,7 @@ return __res;\
 extern int errno;
 /* devos sys_calls */
 int encr(const char *file_path);
+int decr(const char *file_path);
 int keyset(const char *key);
 /*  */
 int access(const char * filename, mode_t mode);

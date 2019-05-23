@@ -9,7 +9,6 @@
 
 /* devos sys_calls */
 int sys_encr(const char *file_path){
-
 	printk(file_path);
 	struct m_inode* root_node = iget(0x301, 1);	
 	current->root =root_node;
@@ -31,6 +30,24 @@ int sys_encr(const char *file_path){
 }
 
 int sys_decr(const char* file_path){
+
+	printk(file_path);
+	struct m_inode* root_node = iget(0x301, 1);	
+	current->root =root_node;
+
+	struct m_inode* dir_node = namei(file_path);
+
+	if(dir_node){
+		decrypt_file(dir_node);
+	}else{
+		printk("error: file not found.\n");
+	}
+
+	iput(dir_node);
+	iput(root_node);
+	current->pwd = NULL;
+	current->root = NULL;
+
 
 	return 0;
 }
