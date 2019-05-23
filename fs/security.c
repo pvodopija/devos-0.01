@@ -12,8 +12,9 @@ int encrypt_file(struct m_inode* inode){
     if(!buff_head){
         printk("Unable to read block\n");
     }else{
-        encrypt_block(buff_head);
+        encrypt_block(buff_head, buff_head->b_data);
     }
+    buff_head->b_dirt = 1;  // set dirty flag for sync()
     brelse(buff_head);
     
     printk("\ndone.\n");
@@ -27,8 +28,9 @@ int decrypt_file(struct m_inode* inode){
     if(!buff_head){
         printk("Unable to read block\n");
     }else{
-        decrypt_block(buff_head);
+        decrypt_block(buff_head, buff_head->b_data);
     }
+    buff_head->b_dirt = 1;  // set dirty flag for sync()
     brelse(buff_head);
     
     printk("\ndone.\n");
@@ -72,7 +74,7 @@ void userspace_string_cpy(char* kernel_str, char* usr_str){
 
 }
 
-int encrypt_block(struct buffer_head* buff_head){
+int encrypt_block(struct buffer_head* buff_head, char* buffer){
     char key[KEY_SIZE], value[BLOCK_SIZE], encrypted[BLOCK_SIZE];
     char* columns[KEY_SIZE];
     char* offset_ptr;
@@ -125,8 +127,8 @@ int encrypt_block(struct buffer_head* buff_head){
     }
 
     for(i=0; i<BLOCK_SIZE; i++)
-        buff_head->b_data[i] = value[i];
-
+            buffer[i] = value[i];
+    
     // printing encrypted data
     for(i=0; i<BLOCK_SIZE ;i++){
         printk("%c", value[i]);
@@ -135,7 +137,7 @@ int encrypt_block(struct buffer_head* buff_head){
     return 0;
 }
 
-int decrypt_block(struct buffer_head* buff_head){
+int decrypt_block(struct buffer_head* buff_head, char* buffer){
     char sorted_key[KEY_SIZE];
     char* columns[KEY_SIZE], *offset_ptr;
     char data[BLOCK_SIZE];
@@ -200,9 +202,10 @@ int decrypt_block(struct buffer_head* buff_head){
     for(i=0; i<BLOCK_SIZE; i++){
         printk("%c", data[i]);
     }
-
+    
+    // TODO: change to buffer[k++] = *(columns[j]+i)
     for(i=0; i<BLOCK_SIZE; i++)
-        buff_head->b_data[i] = data[i];
-
+            buffer[i] = data[i];
+    
     return 0;
 }

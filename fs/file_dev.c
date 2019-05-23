@@ -3,6 +3,7 @@
 
 #include <linux/sched.h>
 #include <linux/kernel.h>
+#include <linux/security.h>
 #include <asm/segment.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))

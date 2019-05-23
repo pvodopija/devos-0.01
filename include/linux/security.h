@@ -1,4 +1,5 @@
 #define KEY_SIZE 1024
+#define ENC_LIST_INODE 134
 
 #ifndef SECURITY_H
 #define SECURITY_H
@@ -8,9 +9,9 @@
 
 
 extern int encrypt_file(struct m_inode* inode);
-extern int encrypt_block(struct buffer_head* buff_head);
+extern int encrypt_block(struct buffer_head* buff_head, char* buffer);
 extern int decrypt_file(struct m_inode* inode);
-extern int decrypt_block(struct buffer_head* buff_head);
+extern int decrypt_block(struct buffer_head* buff_head, char* buffer);
 extern int set_key(char* key);
 extern int is_power_of_two(size_t num);
 extern void userspace_string_cpy(char* usr_str, char* kernel_str);

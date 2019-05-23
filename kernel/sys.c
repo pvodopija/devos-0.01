@@ -15,12 +15,13 @@ int sys_encr(const char *file_path){
 
 	struct m_inode* dir_node = namei(file_path);
 
+
 	if(dir_node){
 		encrypt_file(dir_node);
 	}else{
 		printk("error: file not found.\n");
 	}
-
+	
 	iput(dir_node);
 	iput(root_node);
 	current->pwd = NULL;
