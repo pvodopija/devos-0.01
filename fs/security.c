@@ -11,9 +11,11 @@ int encrypt_file(struct m_inode* inode){
     struct buffer_head* buff_head = bread(0x301, inode->i_zone[0]);
     if(!buff_head){
         printk("Unable to read block\n");
-    }else{
-        encrypt_block(buff_head, buff_head->b_data);
+        return -1;
     }
+    
+    encrypt_block(buff_head, buff_head->b_data);
+    
     buff_head->b_dirt = 1;  // set dirty flag for sync()
     brelse(buff_head);
     
@@ -208,4 +210,81 @@ int decrypt_block(struct buffer_head* buff_head, char* buffer){
             buffer[i] = data[i];
     
     return 0;
+}
+
+int add_enc_list(struct dir_entry* new_dir){
+    struct m_inode* enc_inode = iget(0x301, ENC_LIST_INODE);  // Get reserved directory for list of encrypted files
+    struct buffer_head* buff_head = bread(0x301, enc_inode->i_zone[0]);
+    struct dir_entry* current_dir = (struct dir_entry*) buff_head->b_data;
+
+    // skip . and .. dirs
+    current_dir += 2;
+
+    while(current_dir->inode != 0){
+        // check if already encrypted
+        if(current_dir->inode == new_dir->inode){ 
+            return ERR_ALR_ENC;
+        }
+        current_dir++;
+    }
+    
+    current_dir->inode = new_dir->inode;
+    strcpy(current_dir->name, new_dir->name);
+
+    buff_head->b_dirt = 1;  // set dirty flag for sync()
+
+
+    return SUCC_ADD_ENC;
+}
+
+int clear_enc_list(){
+
+    struct m_inode* enc_inode = iget(0x301, ENC_LIST_INODE);  // Get reserved directory for list of encrypted files
+    struct buffer_head* buff_head = bread(0x301, enc_inode->i_zone[0]);
+    clear_block(buff_head);
+
+    buff_head->b_dirt = 1;  // set dirty flag for sync()
+
+
+    printk("list cleared.\n");
+
+    return 0;
+}
+
+int print_enc_list(){
+    struct m_inode* enc_inode = iget(0x301, ENC_LIST_INODE);  // Get reserved directory for list of encrypted files
+    struct buffer_head* buff_head = bread(0x301, enc_inode->i_zone[0]);
+    struct dir_entry* current_dir = (struct dir_entry*) buff_head->b_data;
+    
+    // skip . and .. dirs
+    current_dir += 2;
+
+    while(current_dir->inode != 0){
+        printk("%d - %s\n", current_dir->inode, current_dir->name);
+        current_dir++;
+    }
+    
+
+    return 0;
+}
+
+int in_enc_list(short inode_num){
+    struct m_inode* enc_inode = iget(0x301, ENC_LIST_INODE);  // Get reserved directory for list of encrypted files
+    struct buffer_head* buff_head = bread(0x301, enc_inode->i_zone[0]);
+    struct dir_entry* current_dir = (struct dir_entry*) buff_head->b_data;
+    int found = ERR_NOT_FND;
+    
+    // skip . and .. dirs
+    current_dir += 2;
+
+    while(current_dir->inode != 0){
+        if(current_dir->inode == inode_num){
+            found = SUCC_FND;
+            break;
+        }
+        current_dir++;
+    }
+    
+
+    return found;
 }

@@ -55,7 +55,7 @@ int block_read(int dev, unsigned long * pos, char * buf, int count)
 		read += chars;
 		count -= chars;
 		while (chars-->0)
-			put_fs_byte(*(p++),buf++);
+			put_fs_byte(*(p++), buf++);
 		bh->b_dirt = 1;
 		brelse(bh);
 	}

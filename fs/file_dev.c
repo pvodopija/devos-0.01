@@ -14,6 +14,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 	int left,chars,nr;
 	struct buffer_head * bh;
 
+
 	if ((left=count)<=0)
 		return 0;
 	while (left) {
@@ -28,8 +29,16 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 		left -= chars;
 		if (bh) {
 			char * p = nr + bh->b_data;
+			// decrypt data if in enc_list
+			if(in_enc_list(inode->i_num) == SUCC_FND){
+				char decrypted[BLOCK_SIZE];
+				decrypt_block(bh, decrypted);
+				p = decrypted;
+			}
 			while (chars-->0)
 				put_fs_byte(*(p++),buf++);
+			
+			
 			brelse(bh);
 		} else {
 			while (chars-->0)

@@ -14,12 +14,24 @@ int sys_encr(const char *file_path){
 	current->root =root_node;
 
 	struct m_inode* dir_node = namei(file_path);
+	int status;
 
 
-	if(dir_node){
-		encrypt_file(dir_node);
-	}else{
+	if(!dir_node){
 		printk("error: file not found.\n");
+		status = -1;
+	}else{
+		struct dir_entry new_dir;
+		userspace_string_cpy(new_dir.name, file_path);
+		new_dir.inode = dir_node->i_num;
+
+		if((status = add_enc_list(&new_dir)) ==  SUCC_ADD_ENC){
+			encrypt_file(dir_node);
+		}
+
+		print_enc_list();
+		
+		
 	}
 	
 	iput(dir_node);
@@ -27,7 +39,7 @@ int sys_encr(const char *file_path){
 	current->pwd = NULL;
 	current->root = NULL;
 
-	return 0;
+	return status;
 }
 
 int sys_decr(const char* file_path){
