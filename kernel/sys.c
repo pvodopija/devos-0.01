@@ -20,6 +20,9 @@ int sys_encr(const char *file_path){
 	if(!dir_node){
 		printk("error: file not found.\n");
 		status = -1;
+	}else if(!strlen(encryption_key)){
+		printk("error: key not set.\n");
+		status = -1;
 	}else{
 		struct dir_entry new_dir;
 		userspace_string_cpy(new_dir.name, file_path);
@@ -30,8 +33,7 @@ int sys_encr(const char *file_path){
 		}
 
 		print_enc_list();
-		
-		
+				
 	}
 	
 	iput(dir_node);
@@ -50,10 +52,23 @@ int sys_decr(const char* file_path){
 
 	struct m_inode* dir_node = namei(file_path);
 
-	if(dir_node){
-		decrypt_file(dir_node);
-	}else{
+	int status;
+
+
+	if(!dir_node){
 		printk("error: file not found.\n");
+		status = -1;
+	}else if(!strlen(encryption_key)){
+		printk("error: key not set.\n");
+		status = -1;
+	}else{
+		if((status = (int) rm_enc_list(dir_node->i_num)) == SUCC_RM)
+			decrypt_file(dir_node);
+		else
+			printk("error: decrypting file.\n");
+		
+		print_enc_list();
+		
 	}
 
 	iput(dir_node);
@@ -62,11 +77,13 @@ int sys_decr(const char* file_path){
 	current->root = NULL;
 
 
-	return 0;
+	return status;
 }
 
 int sys_keyset(const char* key){
 	char _key[KEY_SIZE];
+
+	print_enc_list();
 
 	userspace_string_cpy(_key, key);
 	
@@ -78,7 +95,8 @@ int sys_keyset(const char* key){
 }
 
 int sys_keyclear(){
-	
+	clear_key();
+	print_enc_list();
 	return 0;
 }
 

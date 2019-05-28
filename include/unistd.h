@@ -130,6 +130,7 @@
 #define __NR_encr 70
 #define __NR_decr 71
 #define __NR_keyset 72
+#define __NR_keyclear 73
 // ------------------
 
 #define __NR_stat		106
@@ -201,6 +202,7 @@ extern int errno;
 int encr(const char *file_path);
 int decr(const char *file_path);
 int keyset(const char *key);
+int keyclear();
 /*  */
 int access(const char * filename, mode_t mode);
 int acct(const char * filename);

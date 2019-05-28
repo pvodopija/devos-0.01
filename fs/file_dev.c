@@ -30,7 +30,7 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 		if (bh) {
 			char * p = nr + bh->b_data;
 			// decrypt data if in enc_list
-			if(in_enc_list(inode->i_num) == SUCC_FND){
+			if(in_enc_list(inode->i_num) == SUCC_FND && strlen(encryption_key) > 0){
 				char decrypted[BLOCK_SIZE];
 				decrypt_block(bh, decrypted);
 				p = decrypted;
