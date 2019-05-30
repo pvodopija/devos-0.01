@@ -8,6 +8,7 @@ int main(char* arg){
     char file_name[50];
     if(get_argc(arg) != 2){
         printerr("error: invalid number of arguments\n");
+        printstr("Usage:\n decrt <file>\n");
         _exit(1);
     }
 

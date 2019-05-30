@@ -8,14 +8,11 @@ int main(char* arg){
     
     if(get_argc(arg) != 2){
         printerr("error: invalid number of arguments\n");
+        printstr("Usage:\n encr <file>\n");
         _exit(1);
     }
 
     strcpy(file_name, get_argv(arg, 1));
-
-    /*printstr("encrypting: ");
-    printstr(file_name);
-    printstr("\n");*/
 
     encr(file_name);
     

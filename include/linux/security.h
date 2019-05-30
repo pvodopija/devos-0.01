@@ -1,5 +1,5 @@
-#define KEY_SIZE 1024
-#define CHARSET_SIZE 128
+#define KEY_SIZE 16
+#define CHARSET_SIZE 65
 #define ENC_LIST_INODE 134
 
 #define ERR_ALR_ENC -1  // file already encrypred

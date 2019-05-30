@@ -9,7 +9,6 @@
 
 /* devos sys_calls */
 int sys_encr(const char *file_path){
-	printk(file_path);
 	struct m_inode* root_node = iget(0x301, 1);	
 	current->root =root_node;
 
@@ -28,11 +27,13 @@ int sys_encr(const char *file_path){
 		userspace_string_cpy(new_dir.name, file_path);
 		new_dir.inode = dir_node->i_num;
 
-		if((status = add_enc_list(&new_dir)) ==  SUCC_ADD_ENC){
+		if((status = add_enc_list(&new_dir)) ==  SUCC_ADD_ENC)
 			encrypt_file(dir_node);
-		}
+		else
+			printk("error: file already encrypted.\n");
+		
 
-		print_enc_list();
+		// print_enc_list();
 				
 	}
 	
@@ -40,13 +41,12 @@ int sys_encr(const char *file_path){
 	iput(root_node);
 	current->pwd = NULL;
 	current->root = NULL;
-
+	
 	return status;
+	
 }
 
 int sys_decr(const char* file_path){
-
-	printk(file_path);
 	struct m_inode* root_node = iget(0x301, 1);	
 	current->root =root_node;
 
@@ -65,9 +65,9 @@ int sys_decr(const char* file_path){
 		if((status = (int) rm_enc_list(dir_node->i_num)) == SUCC_RM)
 			decrypt_file(dir_node);
 		else
-			printk("error: decrypting file.\n");
+			printk("error: file not encrypted.\n");
 		
-		print_enc_list();
+		// print_enc_list();
 		
 	}
 
@@ -83,7 +83,7 @@ int sys_decr(const char* file_path){
 int sys_keyset(const char* key){
 	char _key[KEY_SIZE];
 
-	print_enc_list();
+	// print_enc_list();
 
 	userspace_string_cpy(_key, key);
 	
@@ -96,11 +96,13 @@ int sys_keyset(const char* key){
 
 int sys_keyclear(){
 	clear_key();
-	print_enc_list();
+	// print_enc_list();
 	return 0;
 }
 
 int sys_keygen(int level){
+	// print_enc_list();
+
 	char key[KEY_SIZE];
 	if(rnd_key_gen(key, level)){
 		printk("Generated key: %s\n", key);

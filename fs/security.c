@@ -20,7 +20,7 @@ int encrypt_file(struct m_inode* inode){
     }
     
     
-    printk("done.\n");
+    // printk("done.\n");
     
     return 0;
 }
@@ -39,7 +39,7 @@ int decrypt_file(struct m_inode* inode){
     }
     
     
-    printk("done.\n");
+    // printk("done.\n");
 
 
     return 0;
@@ -271,7 +271,7 @@ int rm_enc_list(short i_num){
     while((++current_dir)->inode > 0 && (current_dir)->inode != i_num);
 
     if(current_dir->inode == i_num){
-        printk("Deleting inode %d\n", i_num);
+        // printk("Deleting inode %d\n", i_num);
         while(current_dir->inode > 0){
             struct dir_entry* tmp_entry = current_dir+1;
             *(current_dir++) = *tmp_entry;
@@ -304,7 +304,7 @@ int clear_enc_list(){
     buff_head->b_dirt = 1;  // set dirty flag for sync()
 
 
-    printk("list cleared.\n");
+    // printk("list cleared.\n");
 
     brelse(buff_head);
     iput(enc_inode);

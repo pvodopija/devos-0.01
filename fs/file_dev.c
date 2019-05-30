@@ -35,11 +35,10 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 				decrypt_block(bh, decrypted);
 				p = decrypted;
 			}
+			
 			while (chars-->0)
 				put_fs_byte(*(p++),buf++);
 			
-		
-
 			brelse(bh);
 		} else {
 			while (chars-->0)
@@ -57,6 +56,7 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 	struct buffer_head * bh;
 	char * p;
 	int i=0;
+	int is_encr = 0;
 
 /*
  * ok, append may not work when many processes are writing at the same time
@@ -73,14 +73,12 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 			break;
 		c = pos % BLOCK_SIZE;
 
-		char is_encr = 0;
 
 		// decrypt before appending
 		if(in_enc_list(inode->i_num) == SUCC_FND && strlen(encryption_key) > 0 && (is_encr = 1))
 			decrypt_block(bh, bh->b_data);
 		
 		p = c + bh->b_data;
-
 		bh->b_dirt = 1;
 		c = BLOCK_SIZE-c;
 		if (c > count-i)
@@ -95,10 +93,12 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 		while (c-->0){
 			*(p++) = get_fs_byte(buf++);
 		}
+
+		brelse(bh);
+
 		if(is_encr)
 			encrypt_block(bh, bh->b_data);
-	
-		brelse(bh);
+		
 	}
 	inode->i_mtime = CURRENT_TIME;
 	if (!(filp->f_flags & O_APPEND)) {

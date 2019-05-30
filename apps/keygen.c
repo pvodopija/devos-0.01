@@ -13,6 +13,10 @@ int main(char* args){
     
 
     int level = atoi(get_argv(args, 1));
+    if(level < 1 || level > 3){
+        printerr("error: only levels 1-3 allowed\n");
+        _exit(1);
+    }
     keygen(level);
 
 
