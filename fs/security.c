@@ -1,6 +1,7 @@
 #include <string.h>
 #include <linux/fs.h>
 #include <linux/security.h>
+#include <linux/sched.h>
 #include <asm/segment.h>
 
 
@@ -58,8 +59,44 @@ int set_key(char* key){
 
 }
 
+int rnd_key_gen(char* key, int level){
+    char char_set[CHARSET_SIZE] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
+    unsigned long set_len = strlen(char_set);
+
+    level = 0x2 << level; // length of new key 2^(level+1)
+
+    char* c_ptr = key;
+
+    while(level--){
+        unsigned long index;
+        __asm__ (
+            "pushl %%eax;"
+            "RDTSC;"
+            "popl %%ebx;"
+            "cmpl $0x0, %%eax;"
+            "jne 1f;"
+            "incl %%eax;"
+            "1: divl %%ebx;"
+            "movl %%edx, %0;"
+        :"=r" (index)
+        :"a" (set_len)
+        :"%edx", "%ebx", "memory"
+        );
+
+        // Doesnt work without for some reason... pls help
+        printk("");
+
+        *(c_ptr++) = char_set[index];
+        char_set[index] = char_set[--set_len];
+        char_set[set_len] = '\0';
+    }
+    *c_ptr = '\0';
+
+    return 1;
+}
+
 int clear_key(){
-    strcpy(encryption_key, "");
+    *encryption_key = '\0';
     return 0;
 }
 
@@ -84,15 +121,12 @@ void userspace_string_cpy(char* kernel_str, char* usr_str){
 }
 
 int encrypt_block(struct buffer_head* buff_head, char* buffer){
-    char key[KEY_SIZE], value[BLOCK_SIZE], encrypted[BLOCK_SIZE];
+    char key[KEY_SIZE], encrypted[BLOCK_SIZE];
     char* columns[KEY_SIZE];
     char* offset_ptr;
     int i, j, k, key_len, col_size, curr_min;
 
     strcpy(key, encryption_key);
-
-    for(i=0; i<BLOCK_SIZE; i++)
-        value[i] = buff_head->b_data[i];
   
     key_len = strlen(key); 
 
@@ -101,9 +135,9 @@ int encrypt_block(struct buffer_head* buff_head, char* buffer){
     
     // building matrix
     for(i=0, k=0; i<BLOCK_SIZE; i++, k = (k+col_size)%(BLOCK_SIZE-1)){
-        encrypted[k] = value[i];
+        encrypted[k] = buff_head->b_data[i];
     }
-    encrypted[0] = value[0];
+    encrypted[0] = buff_head->b_data[0];
 
     // setting up column pointers
     for(i=0; i<key_len; i++, offset_ptr+=col_size){
@@ -142,16 +176,10 @@ int encrypt_block(struct buffer_head* buff_head, char* buffer){
 int decrypt_block(struct buffer_head* buff_head, char* buffer){
     char sorted_key[KEY_SIZE];
     char* columns[KEY_SIZE], *offset_ptr;
-    char data[BLOCK_SIZE];
     char decrypted[BLOCK_SIZE];
     int i, j, k;
 
     strcpy(sorted_key, encryption_key);
-
-    // copying to temp data buffer
-    for(i=0; i<BLOCK_SIZE; i++){
-        data[i] = buff_head->b_data[i];
-    }
 
     int key_len = strlen(sorted_key);
     int col_size = BLOCK_SIZE/key_len;
@@ -159,9 +187,9 @@ int decrypt_block(struct buffer_head* buff_head, char* buffer){
     
     // building matrix
     for(i=0, k=0; i<BLOCK_SIZE; i++, k = (k+col_size)%(BLOCK_SIZE-1)){
-        decrypted[k] = data[i];
+        decrypted[k] = buff_head->b_data[i];
     }
-    decrypted[0] = data[0];
+    decrypted[0] = buff_head->b_data[0];
 
     // setting up column pointers
     for(i=0; i<key_len; i++, offset_ptr+=col_size){
@@ -246,7 +274,7 @@ int rm_enc_list(short i_num){
         printk("Deleting inode %d\n", i_num);
         while(current_dir->inode > 0){
             struct dir_entry* tmp_entry = current_dir+1;
-            *(current_dir++) = *(tmp_entry);
+            *(current_dir++) = *tmp_entry;
         }
 
         buff_head->b_dirt = 1;  // set dirty flag for sync()

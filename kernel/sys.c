@@ -101,8 +101,13 @@ int sys_keyclear(){
 }
 
 int sys_keygen(int level){
+	char key[KEY_SIZE];
+	if(rnd_key_gen(key, level)){
+		printk("Generated key: %s\n", key);
+		return 1;
+	}
 
-	return 0;
+	return -1;
 }
 /* end */
 

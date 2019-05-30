@@ -38,7 +38,8 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 			while (chars-->0)
 				put_fs_byte(*(p++),buf++);
 			
-			
+		
+
 			brelse(bh);
 		} else {
 			while (chars-->0)
@@ -71,18 +72,32 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 		if (!(bh=bread(inode->i_dev,block)))
 			break;
 		c = pos % BLOCK_SIZE;
+
+		char is_encr = 0;
+
+		// decrypt before appending
+		if(in_enc_list(inode->i_num) == SUCC_FND && strlen(encryption_key) > 0 && (is_encr = 1))
+			decrypt_block(bh, bh->b_data);
+		
 		p = c + bh->b_data;
+
 		bh->b_dirt = 1;
 		c = BLOCK_SIZE-c;
-		if (c > count-i) c = count-i;
+		if (c > count-i)
+			c = count-i;
 		pos += c;
 		if (pos > inode->i_size) {
 			inode->i_size = pos;
 			inode->i_dirt = 1;
 		}
 		i += c;
-		while (c-->0)
+		
+		while (c-->0){
 			*(p++) = get_fs_byte(buf++);
+		}
+		if(is_encr)
+			encrypt_block(bh, bh->b_data);
+	
 		brelse(bh);
 	}
 	inode->i_mtime = CURRENT_TIME;

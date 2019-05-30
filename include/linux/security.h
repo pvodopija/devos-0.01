@@ -1,4 +1,5 @@
 #define KEY_SIZE 1024
+#define CHARSET_SIZE 128
 #define ENC_LIST_INODE 134
 
 #define ERR_ALR_ENC -1  // file already encrypred
@@ -8,11 +9,8 @@
 #define SUCC_RM 1		// file successfully removed
 #define ERR_RM -1		// file not removed
 
-
-
 #ifndef SECURITY_H
 #define SECURITY_H
-
 
 #include <linux/fs.h>
 #include <string.h>
@@ -30,6 +28,7 @@ extern int encrypt_block(struct buffer_head* buff_head, char* buffer);
 extern int decrypt_file(struct m_inode* inode);
 extern int decrypt_block(struct buffer_head* buff_head, char* buffer);
 extern int set_key(char* key);
+extern int rnd_key_gen(char* key, int level);
 extern int clear_key();
 extern int is_power_of_two(size_t num);
 extern void userspace_string_cpy(char* kernel_str, char* usr_str);
