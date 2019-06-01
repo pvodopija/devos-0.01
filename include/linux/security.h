@@ -1,4 +1,4 @@
-#define KEY_SIZE 16
+#define KEY_SIZE 32
 #define CHARSET_SIZE 65
 #define ENC_LIST_INODE 134
 

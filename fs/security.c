@@ -69,23 +69,16 @@ int rnd_key_gen(char* key, int level){
 
     while(level--){
         unsigned long index;
-        __asm__ (
-            "pushl %%eax;"
+        __asm__ __volatile__ (
             "RDTSC;"
-            "popl %%ebx;"
-            "cmpl $0x0, %%eax;"
-            "jne 1f;"
-            "incl %%eax;"
-            "1: divl %%ebx;"
+	    "addl %%eax, %%edx;"
             "movl %%edx, %0;"
         :"=r" (index)
         :"a" (set_len)
-        :"%edx", "%ebx", "memory"
+        :"%edx", "memory"
         );
-
-        // Doesnt work without for some reason... pls help
-        printk("");
-
+	
+	index %= set_len;
         *(c_ptr++) = char_set[index];
         char_set[index] = char_set[--set_len];
         char_set[set_len] = '\0';

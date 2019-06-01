@@ -106,6 +106,7 @@ int sys_keygen(int level){
 	char key[KEY_SIZE];
 	if(rnd_key_gen(key, level)){
 		printk("Generated key: %s\n", key);
+		set_key(key);
 		return 1;
 	}
 

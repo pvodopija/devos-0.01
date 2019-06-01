@@ -93,11 +93,13 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 		while (c-->0){
 			*(p++) = get_fs_byte(buf++);
 		}
-
-		brelse(bh);
-
+		
 		if(is_encr)
 			encrypt_block(bh, bh->b_data);
+		else		
+			brelse(bh);
+
+		
 		
 	}
 	inode->i_mtime = CURRENT_TIME;
