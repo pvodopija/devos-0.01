@@ -88,6 +88,7 @@ int main(void)		/* This really IS void, no error here. */
 	sched_init();
 	buffer_init();
 	hd_init();
+	
 	sti();
 	move_to_user_mode();
 	if (!fork()) {		/* we count on this going ok */
@@ -130,6 +131,7 @@ void init(void)
 	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
 		NR_BUFFERS*BLOCK_SIZE);
 	printf(" Ok.\n\r");
+	load_table();
 	if ((i=fork())<0)
 		printf("Fork failed in init\r\n");
 	else if (!i) {
@@ -143,5 +145,6 @@ void init(void)
 	j=wait(&i);
 	printf("child %d died with code %04x\n",j,i);
 	sync();
+
 	_exit(0);	/* NOTE! _exit, not exit() */
 }

@@ -2,7 +2,7 @@
 
 int main(void){
 
-    keyclear();
+    keyclear(K_GLOBAL);
 
     _exit(0);
 }

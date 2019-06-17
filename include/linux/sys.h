@@ -77,13 +77,14 @@ extern int sys_getdents64();
 extern int sys_fcntl64();
 extern int sys_null();	/* not implemented sys_call */
 
-// devos syscalls ==>
+/* devos syscalls */
 extern int sys_encr();
 extern int sys_decr();
 extern int sys_keyset();
 extern int sys_keyclear();
 extern int sys_keygen();
-//----------------------
+extern int sys_load_table();
+/* --------------- */
 
 
 fn_ptr sys_call_table[] = { sys_setup, sys_exit, sys_fork, sys_read,
@@ -100,7 +101,7 @@ sys_oldolduname, sys_umask, sys_chroot, sys_ustat, sys_dup2, sys_getppid,
 sys_getpgrp,sys_setsid, sys_null /*67*/,sys_null,sys_null,
 
 /* 70 */sys_encr,sys_decr,sys_keyset,sys_keyclear,sys_keygen,
-sys_null,sys_null,sys_null,sys_null,sys_null,
+sys_load_table,sys_null,sys_null,sys_null,sys_null,
 /* 80 */sys_null,sys_null,sys_null,sys_null,sys_null,
 sys_null,sys_null,sys_null,sys_null,sys_null,
 /* 90 */sys_null,sys_null,sys_null,sys_null,sys_null,

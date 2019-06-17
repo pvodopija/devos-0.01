@@ -21,6 +21,7 @@
 #include <asm/io.h>
 #include <asm/system.h>
 #include <linux/tty.h>
+#include <linux/security.h>
 #include <string.h>
 
 #define SCREEN_START 0xb8000
@@ -808,7 +809,7 @@ void con_write(struct tty_struct * tty)
 		GETCH(tty->write_q,c);
 		switch(state) {
 			case 0:
-				if (c>31 && c<127) {
+				if (c>31 && c<127 && IS_VISIBLE(tty->settings)) {	/* check if visible flag is on */
 					if (x>=columns) {
 						x -= columns;
 						pos -= columns<<1;
@@ -970,7 +971,6 @@ void con_init(void)
 {
 	strcpy(current_dir_path, "/");
 	clear_cliboard();
-	
 
 	register unsigned char a;
 

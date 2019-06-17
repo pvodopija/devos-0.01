@@ -29,8 +29,9 @@ int file_read(struct m_inode * inode, struct file * filp, char * buf, int count)
 		left -= chars;
 		if (bh) {
 			char * p = nr + bh->b_data;
-			// decrypt data if in enc_list
-			if(in_enc_list(inode->i_num) == SUCC_FND && strlen(encryption_key) > 0){
+			// decrypt data if in enc_table
+			char* key = (!current->key[0])?encryption_key:current->key;
+			if(strlen(key) > 0 && enc_table.search(&enc_table, inode->i_num) != ERR_NOT_FND){
 				char decrypted[BLOCK_SIZE];
 				decrypt_block(bh, decrypted);
 				p = decrypted;
@@ -75,7 +76,8 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 
 
 		// decrypt before appending
-		if(in_enc_list(inode->i_num) == SUCC_FND && strlen(encryption_key) > 0 && (is_encr = 1))
+		char* key = (!current->key[0])?encryption_key:current->key;
+		if(strlen(key) > 0 && enc_table.search(&enc_table, inode->i_num) != ERR_NOT_FND && (is_encr = 1))
 			decrypt_block(bh, bh->b_data);
 		
 		p = c + bh->b_data;
@@ -94,10 +96,12 @@ int file_write(struct m_inode * inode, struct file * filp, char * buf, int count
 			*(p++) = get_fs_byte(buf++);
 		}
 
-		brelse(bh);
-
 		if(is_encr)
 			encrypt_block(bh, bh->b_data);
+
+		brelse(bh);
+
+		
 		
 	}
 	inode->i_mtime = CURRENT_TIME;

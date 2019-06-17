@@ -50,7 +50,8 @@ struct tty_struct tty_table[] = {
 		con_write,
 		{0,0,0,0,""},		/* console read-queue */
 		{0,0,0,0,""},		/* console write-queue */
-		{0,0,0,0,""}		/* console secondary queue */
+		{0,0,0,0,""},		/* console secondary queue */
+		1					/* visible in console */
 	},{
 		{0, /*IGNCR*/
 		OPOST | ONLRET,		/* change outgoing NL to CR */
@@ -63,7 +64,8 @@ struct tty_struct tty_table[] = {
 		rs_write,
 		{0x3f8,0,0,0,""},		/* rs 1 */
 		{0x3f8,0,0,0,""},
-		{0,0,0,0,""}
+		{0,0,0,0,""},
+		0
 	},{
 		{0, /*IGNCR*/
 		OPOST | ONLRET,		/* change outgoing NL to CR */
@@ -77,6 +79,7 @@ struct tty_struct tty_table[] = {
 		{0x2f8,0,0,0,""},		/* rs 2 */
 		{0x2f8,0,0,0,""},
 		{0,0,0,0,""}
+		,0
 	}
 };
 

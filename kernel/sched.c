@@ -77,7 +77,18 @@ void schedule(void)
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
 					(*p)->signal |= (1<<(SIGALRM-1));
 					(*p)->alarm = 0;
-				}
+			}
+			// check if key session timed out
+			if ((*p)->k_timeout && (*p)->k_timeout < jiffies) {
+					printk("\nprocess[%d] key cleared.\n", (*p)->pid);
+					sys_keyclear(K_LOCAL);
+					(*p)->k_timeout = 0;
+			}
+			if(task[0]->k_timeout && task[0]->k_timeout < jiffies){
+				printk("\nGlobal key cleared.\n");
+				sys_keyclear(K_GLOBAL);
+				task[0]->k_timeout = 0;
+			}
 			if ((*p)->signal && (*p)->state==TASK_INTERRUPTIBLE)
 				(*p)->state=TASK_RUNNING;
 		}

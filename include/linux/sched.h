@@ -10,6 +10,7 @@
 #include <linux/head.h>
 #include <linux/fs.h>
 #include <linux/mm.h>
+#include<linux/security.h>
 
 #if (NR_OPEN > 32)
 #error "Currently the close-on-exec-flags are in one word, max 32 files/proc"
@@ -102,6 +103,10 @@ struct task_struct {
 	struct desc_struct ldt[3];
 /* tss for this task */
 	struct tss_struct tss;
+	/* devos */
+	char key[KEY_SIZE];
+	char h_key[HKEY_SIZE];
+	long k_timeout;
 };
 
 /*

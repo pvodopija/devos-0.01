@@ -3,17 +3,16 @@
 #define UTIL_IMPLEMENTATION
 #include "utils.h"
 
-int main(char* args){
-
-    if(get_argc(args) != 2){
-        printerr("error: invalid number of arguments\n");
-        printstr("Usage:\n keyset <key>\n");
-        _exit(1);
-    }
+int main(void){
     char new_key[1024];
-    strcpy(new_key, get_argv(args, 1));
 
-    keyset(new_key);
-    
-    _exit(0);
+    stty(CONSOLE, N_ECHO);  /* disable printing to console setting */
+    int key_len = read(STDIN_FILENO, new_key, sizeof(new_key));
+    stty(CONSOLE, ECHO);    /* enable printing to console setting */
+
+    new_key[key_len-1] = '\0';
+
+    int status = keyset(new_key, K_GLOBAL);
+
+    _exit(status);
 }

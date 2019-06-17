@@ -6,34 +6,34 @@
 #include <asm/segment.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
+#include <sys/stat.h>
 
 /* devos sys_calls */
 int sys_encr(const char *file_path){
 	struct m_inode* root_node = iget(0x301, 1);	
-	current->root =root_node;
+	current->root = root_node;
 
 	struct m_inode* dir_node = namei(file_path);
 	int status;
 
+	key_to_use = (!current->key[0])?encryption_key:current->key;
+	hash_to_use = (!current->key[0])?h_key:current->h_key;
 
 	if(!dir_node){
-		printk("error: file not found.\n");
+		printk("error: File not found.\n");
 		status = -1;
-	}else if(!strlen(encryption_key)){
-		printk("error: key not set.\n");
+	}else if(!strlen(key_to_use)){
+		printk("error: Key not set.\n");
 		status = -1;
 	}else{
-		struct dir_entry new_dir;
-		userspace_string_cpy(new_dir.name, file_path);
-		new_dir.inode = dir_node->i_num;
-
-		if((status = add_enc_list(&new_dir)) ==  SUCC_ADD_ENC)
-			encrypt_file(dir_node);
-		else
-			printk("error: file already encrypted.\n");
-		
-
-		// print_enc_list();
+		if(S_ISDIR(dir_node->i_mode))
+			encrypt_directory(dir_node);
+		else{
+			struct e_dir new_dir;
+			new_dir.i_num = dir_node->i_num;
+			string_copy(new_dir.h_key,hash_to_use,HKEY_SIZE);
+			encrypt_file(dir_node, &new_dir);
+		}
 				
 	}
 	
@@ -53,22 +53,21 @@ int sys_decr(const char* file_path){
 	struct m_inode* dir_node = namei(file_path);
 
 	int status;
-
+	key_to_use = (!current->key[0])?encryption_key:current->key;
+	hash_to_use = (!current->key[0])?h_key:current->h_key;
 
 	if(!dir_node){
-		printk("error: file not found.\n");
+		printk("error: File not found.\n");
 		status = -1;
-	}else if(!strlen(encryption_key)){
-		printk("error: key not set.\n");
+	}else if(!strlen(key_to_use)){
+		printk("error: Key not set.\n");
 		status = -1;
 	}else{
-		if((status = (int) rm_enc_list(dir_node->i_num)) == SUCC_RM)
-			decrypt_file(dir_node);
+		if(S_ISDIR(dir_node->i_mode))
+			decrypt_directory(dir_node);
 		else
-			printk("error: file not encrypted.\n");
-		
-		// print_enc_list();
-		
+			decrypt_file(dir_node);
+
 	}
 
 	iput(dir_node);
@@ -80,37 +79,86 @@ int sys_decr(const char* file_path){
 	return status;
 }
 
-int sys_keyset(const char* key){
+int sys_keyset(const char* key, int glob_flag){
 	char _key[KEY_SIZE];
-
-	// print_enc_list();
 
 	userspace_string_cpy(_key, key);
 	
-	if(!set_key(_key)){
-		return 0;
-	}
-		
-	return 1;
+	return set_key(_key, glob_flag);
 }
 
-int sys_keyclear(){
-	clear_key();
-	// print_enc_list();
+int sys_keyclear(int glob_flag){
+	clear_key(glob_flag);
+	
+	/* struct m_inode* dir_node = iget(0x301, ENC_TABLE_INODE);
+	if(!dir_node){
+		printk("NOT FOUND\n");
+		return 0;
+	}
+
+	struct buffer_head* buff_head = bread(dir_node->i_dev, dir_node->i_zone[0]);
+
+	clear_block(buff_head->b_data);
+
+	brelse(buff_head);
+	iput(dir_node);
+	
+
+
+	struct m_inode* dir_node = iget(0x301, 1);
+	if(!dir_node){
+		printk("NOT FOUND\n");
+		return 0;
+	}
+
+	struct buffer_head* buff_head = bread(dir_node->i_dev, dir_node->i_zone[0]);
+	struct dir_entry* curr_dir = (struct dir_entry*) buff_head->b_data;
+
+	while((curr_dir++)->inode != ENC_TABLE_INODE);
+	--curr_dir;
+
+	printk("%d\n", curr_dir->inode);
+
+	curr_dir->inode = 0;
+	curr_dir->name[0] = '\0';
+	curr_dir->name[1] = '\0';
+	curr_dir->name[2] = '\0';
+	curr_dir->name[3] = '\0';
+	curr_dir->name[4] = '\0';
+	curr_dir->name[5] = '\0';
+	curr_dir->name[6] = '\0';
+	curr_dir->name[7] = '\0';
+	curr_dir->name[8] = '\0';
+	curr_dir->name[9] = '\0';
+	curr_dir->name[10] = '\0';
+	curr_dir->name[11] = '\0';
+	curr_dir->name[12] = '\0';
+	curr_dir->name[13] = '\0';
+
+	brelse(buff_head);
+	iput(dir_node);
+	*/
+
 	return 0;
 }
 
 int sys_keygen(int level){
-	// print_enc_list();
 
 	char key[KEY_SIZE];
 	if(rnd_key_gen(key, level)){
 		printk("Generated key: %s\n", key);
+		set_key(key, K_GLOBAL);
 		return 1;
 	}
 
 	return -1;
 }
+
+int sys_load_table(){
+	load_hash_table();
+	return 0;
+}
+
 /* end */
 
 int sys_ftime()
@@ -148,9 +196,10 @@ int sys_ptrace()
 	return -ENOSYS;
 }
 
-int sys_stty()
-{
-	return -ENOSYS;
+int sys_stty(int tty_index, long settings){
+	tty_table[tty_index].settings = settings;	/* change tty struct settings */
+
+	return 0;
 }
 
 int sys_gtty()

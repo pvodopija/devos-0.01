@@ -34,7 +34,7 @@ int itoa(int n, char *buf);
 int atoi(const char *buf);
 
 /* Pauses execution until enter is pressed */
-void pause(void);
+//void pause(void);
 
 /* Reads from file fd until it hits maxlen or \n */
 int fgets(char *buffer, int maxlen, int fd);
@@ -114,12 +114,14 @@ int atoi(const char *buf)
 	return r;
 }
 
+/*
 void pause()
 {
 	char b[10];
 	printstr("Press enter to continue...");
 	read(0, b, 10);
 }
+*/
 
 int fgets(char *buffer, int maxlen, int fd)
 {

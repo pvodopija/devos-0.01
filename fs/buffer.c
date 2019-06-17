@@ -9,7 +9,9 @@
 #include <linux/config.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
+#include <linux/security.h>
 #include <asm/system.h>
+
 
 #if (BUFFER_END & 0xfff)
 #error "Bad BUFFER_END value"
@@ -37,8 +39,23 @@ static inline void wait_on_buffer(struct buffer_head * bh)
 int sys_sync(void)
 {
 	int i;
+	// writting table of encrypted files to disk
+	struct m_inode* enc_inode = iget(0x301, ENC_TABLE_INODE);  // Get reserved directory for list of encrypted files
+    struct buffer_head* buff_head = bread(enc_inode->i_dev, enc_inode->i_zone[0]);
+    struct e_dir* current_dir = (struct e_dir*) buff_head->b_data;
+	
+	for(i=0; i<TABLE_SIZE; i++)
+		*(current_dir++) = enc_table.values[i];
+
+	buff_head->b_dirt = 1;  // set dirty flag for sync()
+    brelse(buff_head);
+    iput(enc_inode);
+
+	// Legacy code below
+
 	struct buffer_head * bh;
 
+	
 	sync_inodes();		/* write out inodes into buffers */
 	bh = start_buffer;
 	for (i=0 ; i<NR_BUFFERS ; i++,bh++) {

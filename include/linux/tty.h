@@ -39,6 +39,9 @@ struct tty_queue {
 #define START_CHAR(tty) ((tty)->termios.c_cc[VSTART])
 #define ERASE_CHAR(tty) ((tty)->termios.c_cc[VERASE])
 
+/* Settings manager macros */
+#define IS_VISIBLE(settings) settings & 0b1
+
 struct tty_struct {
 	struct termios termios;
 	int pgrp;
@@ -47,6 +50,7 @@ struct tty_struct {
 	struct tty_queue read_q;
 	struct tty_queue write_q;
 	struct tty_queue secondary;
+	long settings;				/* lowest end bit is for console visibility (1-visible, 0-invisible) */
 	};
 
 extern struct tty_struct tty_table[];

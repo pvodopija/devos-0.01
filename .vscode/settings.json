@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "fs.h": "c"
+        "fs.h": "c",
+        "errno.h": "c",
+        "unistd.h": "c",
+        "string.h": "c"
     }
 }

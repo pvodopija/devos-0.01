@@ -50,6 +50,15 @@
 #define _PC_VDISABLE		8
 #define _PC_CHOWN_RESTRICTED	9
 
+/* devos ~ security ~ */
+#define K_LOCAL 1
+#define K_GLOBAL 2
+
+#define CONSOLE 0
+#define ECHO 0b1
+#define N_ECHO 0b0
+
+
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
@@ -126,13 +135,14 @@
 #define __NR_getpgrp	65
 #define __NR_setsid		66
 
-// devos sys_calls ==>
+/* devos sys_calls */
 #define __NR_encr 		70
 #define __NR_decr 		71
 #define __NR_keyset 	72
 #define __NR_keyclear 	73
 #define __NR_keygen 	74
-// ------------------
+#define __NR_load_table 75
+/* --------------- */
 
 #define __NR_stat		106
 #define __NR_lstat		107
@@ -202,10 +212,12 @@ extern int errno;
 /* devos sys_calls */
 int encr(const char *file_path);
 int decr(const char *file_path);
-int keyset(const char *key);
+int keyset(const char *key, int glob_flag);
 int keygen(int level);
-int keyclear();
-/*  */
+int keyclear(int glob_flag);
+int load_table();
+int stty(int tty_index, long settings);
+/* --------------- */
 int access(const char * filename, mode_t mode);
 int acct(const char * filename);
 int alarm(int sec);
