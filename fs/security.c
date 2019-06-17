@@ -233,8 +233,9 @@ int rnd_key_gen(char* key, int level){
         :"a" (set_len)
         :"%edx", "memory"
         );
-	
+
 	    index %= set_len;
+
         *(c_ptr++) = char_set[index];
         char_set[index] = char_set[--set_len];
         char_set[set_len] = '\0';
@@ -520,10 +521,9 @@ void load_hash_table(){
 
 int compare_hash(char* hash1, char* hash2){
     int i;
-    for(i=0; i<HKEY_SIZE; i++){
+    for(i=0; i<HKEY_SIZE; i++)
         if(hash1[i] != hash2[i])
             return -EINVAL;     /* key does not match with hash value */
-    }
 
     return 1;
 }
